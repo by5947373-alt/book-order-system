@@ -51,6 +51,65 @@ const STATUSES = new Set(['pending', 'confirmed', 'cancelled']);
 // 管理者權杖只從環境變數讀取 —— 絕不寫死 / 進版控。
 const ADMIN_TOKEN = process.env.ADMIN_TOKEN || '';
 
+// Email 訂單通知（Resend）。金鑰只從環境變數讀取；未設定時自動略過寄信。
+const SITE_NAME = '木語書坊';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const ORDER_NOTIFY_TO = process.env.ORDER_NOTIFY_TO || 'by5947373@gmail.com';
+const ORDER_FROM = process.env.ORDER_FROM || 'onboarding@resend.dev';
+
+const escHtml = (s) =>
+  String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// 顧客送出訂單後，寄一封通知信給店家。fire-and-forget：寄信失敗不影響下單。
+async function notifyNewOrder(o) {
+  if (!RESEND_API_KEY) return; // 尚未設定寄信金鑰 → 略過
+  const rows = [
+    ['書名', `《${o.book}》`],
+    ['數量', o.quantity],
+    ['姓名', o.name],
+    ['Email', o.email],
+    ['電話', o.phone || '—'],
+    ['取貨方式', o.delivery || '—'],
+    ['備註', o.note || '—'],
+    ['訂單編號', `#${o.id}`],
+    ['時間', o.created_at],
+  ]
+    .map(
+      ([k, v]) =>
+        `<tr><td style="padding:6px 14px;color:#6b5b49;white-space:nowrap">${k}</td>` +
+        `<td style="padding:6px 14px;color:#3a2e23;font-weight:600">${escHtml(v)}</td></tr>`
+    )
+    .join('');
+  const html =
+    `<div style="font-family:sans-serif;max-width:520px;margin:0 auto">` +
+    `<h2 style="color:#4a3625">🛒 ${SITE_NAME}・新訂單通知</h2>` +
+    `<p style="color:#6b5b49">有一筆新的購買問卷送出囉：</p>` +
+    `<table style="border-collapse:collapse;background:#fffdf8;border:1px solid #e4d8c6;border-radius:8px">${rows}</table>` +
+    `<p style="color:#8b6a47;font-size:13px;margin-top:18px">直接回覆這封信即可聯絡顧客（${escHtml(o.email)}）。</p>` +
+    `</div>`;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        from: `${SITE_NAME} <${ORDER_FROM}>`,
+        to: [ORDER_NOTIFY_TO],
+        reply_to: o.email,
+        subject: `🛒 新訂單 #${o.id}：${o.book}`,
+        html,
+      }),
+    });
+    if (!res.ok) {
+      console.error('訂單通知信寄送失敗', res.status, await res.text().catch(() => ''));
+    }
+  } catch (e) {
+    console.error('訂單通知信例外：', e?.message || e);
+  }
+}
+
 // 常數時間比對 Bearer token；未設定管理權杖時一律視為非管理者。
 function isAdmin(req) {
   if (!ADMIN_TOKEN) return false;
@@ -147,6 +206,7 @@ const server = createServer(async (req, res) => {
     }
     const info = insertStmt.run(name, email, phone, book, quantity, delivery, note);
     const row = getByIdStmt.get(info.lastInsertRowid);
+    notifyNewOrder(row); // fire-and-forget：不 await，寄信不擋回應
     return sendJSON(res, 201, { order: row });
   }
 

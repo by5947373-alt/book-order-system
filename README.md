@@ -23,6 +23,17 @@ ADMIN_TOKEN=你的密碼 npm start
 
 資料庫檔在 `data/orders.db`（已被 `.gitignore` 忽略）。
 
+## Email 訂單通知（Resend）
+顧客送出訂單後，會寄一封通知信給店家。用環境變數設定，**未設定時自動略過、不影響下單**：
+
+| 變數 | 說明 | 預設 |
+|------|------|------|
+| `RESEND_API_KEY` | Resend API 金鑰（[resend.com](https://resend.com) 免費註冊取得） | 未設定則不寄信 |
+| `ORDER_NOTIFY_TO` | 收通知的信箱 | `by5947373@gmail.com` |
+| `ORDER_FROM` | 寄件地址 | `onboarding@resend.dev` |
+
+用 Resend 測試寄件地址 `onboarding@resend.dev` 時，只能寄到「註冊 Resend 用的那個信箱」。要寄給顧客（訂單確認信）或用自訂寄件地址，需在 Resend 驗證自己的網域。
+
 ## API
 | 方法 | 路徑 | 說明 | 權限 |
 |------|------|------|------|
