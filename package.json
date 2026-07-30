@@ -1,0 +1,13 @@
+{
+  "name": "book-order-system",
+  "version": "1.0.0",
+  "description": "書籍訂購系統 MVP — Landing page + 購買問卷 + 簡易後台（Node + SQLite）",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

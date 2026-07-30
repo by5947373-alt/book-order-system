@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>後台 · 木語書坊訂單管理</title>
+<style>
+  :root {
+    --bg:#f7f1e7; --paper:#fffdf8; --ink:#3a2e23; --ink-soft:#6b5b49;
+    --wood:#8b6a47; --wood-dark:#6b4f34; --wood-deep:#4a3625; --accent:#b5764a;
+    --line:#e4d8c6; --shadow:0 10px 34px rgba(74,54,37,.12);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;
+    line-height:1.6;
+  }
+  .wrap { width:min(1080px,94vw); margin:0 auto; padding:28px 0 60px; }
+  header.bar { background:var(--wood-deep); color:#fff; }
+  header.bar .wrap { padding:18px 0; display:flex; align-items:center; justify-content:space-between; }
+  header.bar .brand { font-weight:700; font-size:1.15rem; display:flex; align-items:center; gap:10px; }
+  header.bar .mark { width:30px; height:30px; border-radius:8px; background:rgba(255,255,255,.16); display:grid; place-items:center; }
+  header.bar a { color:#e3d5c0; font-size:.92rem; text-decoration:none; }
+  header.bar a:hover { color:#fff; }
+
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  .sub { color:var(--ink-soft); margin:0 0 24px; }
+
+  .btn { border:0; border-radius:9px; padding:9px 16px; font-size:.92rem; font-weight:600; cursor:pointer; font-family:inherit; }
+  .btn-primary { background:var(--wood-dark); color:#fff; }
+  .btn-primary:hover { background:var(--wood-deep); }
+  .btn-ghost { background:transparent; border:1.4px solid var(--line); color:var(--ink); }
+  .btn-ghost:hover { background:#efe6d6; }
+  .btn:disabled { opacity:.5; cursor:default; }
+
+  /* 登入卡 */
+  .login { max-width:420px; margin:8vh auto; background:var(--paper); border:1px solid var(--line); border-radius:16px; box-shadow:var(--shadow); padding:34px 30px; }
+  .login h1 { margin:0 0 6px; }
+  .login p { color:var(--ink-soft); margin:0 0 20px; font-size:.95rem; }
+  .login input { width:100%; padding:12px 14px; font-size:1rem; border:1.5px solid var(--line); border-radius:10px; margin-bottom:14px; font-family:inherit; }
+  .login input:focus { outline:none; border-color:var(--wood); box-shadow:0 0 0 3px rgba(139,106,71,.14); }
+  .login .btn-primary { width:100%; padding:12px; }
+  .login .err { color:#b04a3a; font-size:.9rem; margin:10px 0 0; min-height:1.2em; }
+
+  /* 工具列 */
+  .toolbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  .toolbar .stats { color:var(--ink-soft); font-size:.92rem; margin-right:auto; }
+  .filters { display:flex; gap:6px; }
+  .chip { border:1.4px solid var(--line); background:var(--paper); border-radius:999px; padding:6px 14px; font-size:.88rem; cursor:pointer; color:var(--ink-soft); }
+  .chip.active { background:var(--wood-dark); color:#fff; border-color:var(--wood-dark); }
+
+  /* 訂單卡 */
+  .orders { display:grid; gap:14px; }
+  .order-card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .oc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .oc-title { font-weight:700; font-size:1.08rem; }
+  .oc-title .qty { color:var(--accent); font-weight:600; }
+  .badge { font-size:.78rem; font-weight:700; padding:4px 11px; border-radius:999px; white-space:nowrap; }
+  .badge.pending { background:#f4e7cf; color:#8a6a1f; }
+  .badge.confirmed { background:#dcecd6; color:#3f6f37; }
+  .badge.cancelled { background:#eddcd8; color:#a24a3a; }
+  .oc-meta { color:var(--ink-soft); font-size:.92rem; margin:10px 0 0; display:grid; grid-template-columns:repeat(2,1fr); gap:2px 20px; }
+  @media (max-width:600px){ .oc-meta { grid-template-columns:1fr; } }
+  .oc-note { margin:10px 0 0; padding:10px 12px; background:#faf4e8; border-radius:9px; font-size:.92rem; color:var(--ink-soft); }
+  .oc-actions { display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .oc-actions .btn { padding:7px 13px; font-size:.86rem; }
+  .btn-del { background:transparent; border:1.4px solid #e2c9c2; color:#a24a3a; }
+  .btn-del:hover { background:#f4e4e0; }
+  .empty { text-align:center; color:var(--ink-soft); padding:60px 0; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand"><span class="mark">木</span>訂單後台</div>
+    <a href="/">← 回首頁</a>
+  </div>
+</header>
+
+<!-- 登入 -->
+<div id="loginView" class="login">
+  <h1>管理者登入</h1>
+  <p>請輸入管理權杖（ADMIN_TOKEN）以檢視訂單。</p>
+  <input id="tokenInput" type="password" placeholder="管理權杖" autocomplete="off" />
+  <button class="btn btn-primary" id="loginBtn">登入</button>
+  <p class="err" id="loginErr"></p>
+</div>
+
+<!-- 後台 -->
+<main id="adminView" class="wrap hidden">
+  <h1>訂單管理</h1>
+  <p class="sub">查看顧客送出的購買問卷，確認或取消訂單。</p>
+
+  <div class="toolbar">
+    <span class="stats" id="stats">載入中…</span>
+    <div class="filters" id="filters">
+      <button class="chip active" data-f="all">全部</button>
+      <button class="chip" data-f="pending">待確認</button>
+      <button class="chip" data-f="confirmed">已確認</button>
+      <button class="chip" data-f="cancelled">已取消</button>
+    </div>
+    <button class="btn btn-ghost" id="refreshBtn">重新整理</button>
+    <button class="btn btn-ghost" id="logoutBtn">登出</button>
+  </div>
+
+  <div class="orders" id="orders"></div>
+</main>
+
+<script>
+  const TOKEN_KEY = 'muyu_admin_token';
+  let token = localStorage.getItem(TOKEN_KEY) || '';
+  let allOrders = [];
+  let filter = 'all';
+
+  const loginView = document.getElementById('loginView');
+  const adminView = document.getElementById('adminView');
+
+  const STATUS_LABEL = { pending:'待確認', confirmed:'已確認', cancelled:'已取消' };
+
+  function authHeaders() { return { 'Authorization': 'Bearer ' + token }; }
+
+  async function checkToken(t) {
+    const res = await fetch('/api/admin/check', { headers: { 'Authorization': 'Bearer ' + t } });
+    return res.ok;
+  }
+
+  function showAdmin() {
+    loginView.classList.add('hidden');
+    adminView.classList.remove('hidden');
+    loadOrders();
+  }
+  function showLogin() {
+    adminView.classList.add('hidden');
+    loginView.classList.remove('hidden');
+  }
+
+  // 登入
+  document.getElementById('loginBtn').addEventListener('click', doLogin);
+  document.getElementById('tokenInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') doLogin(); });
+  async function doLogin() {
+    const t = document.getElementById('tokenInput').value.trim();
+    const err = document.getElementById('loginErr');
+    err.textContent = '';
+    if (!t) { err.textContent = '請輸入權杖'; return; }
+    if (await checkToken(t)) {
+      token = t;
+      localStorage.setItem(TOKEN_KEY, t);
+      showAdmin();
+    } else {
+      err.textContent = '權杖不正確';
+    }
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem(TOKEN_KEY);
+    token = '';
+    document.getElementById('tokenInput').value = '';
+    showLogin();
+  });
+  document.getElementById('refreshBtn').addEventListener('click', loadOrders);
+
+  document.getElementById('filters').addEventListener('click', (e) => {
+    const btn = e.target.closest('.chip');
+    if (!btn) return;
+    filter = btn.dataset.f;
+    document.querySelectorAll('.chip').forEach((c) => c.classList.toggle('active', c === btn));
+    render();
+  });
+
+  async function loadOrders() {
+    document.getElementById('stats').textContent = '載入中…';
+    const res = await fetch('/api/orders', { headers: authHeaders() });
+    if (res.status === 401) { showLogin(); return; }
+    const data = await res.json();
+    allOrders = data.orders || [];
+    render();
+  }
+
+  function render() {
+    const box = document.getElementById('orders');
+    const list = allOrders.filter((o) => filter === 'all' || o.status === filter);
+    const counts = allOrders.reduce((a, o) => (a[o.status] = (a[o.status]||0)+1, a), {});
+    document.getElementById('stats').textContent =
+      `共 ${allOrders.length} 筆　待確認 ${counts.pending||0}　已確認 ${counts.confirmed||0}　已取消 ${counts.cancelled||0}`;
+
+    box.textContent = '';
+    if (!list.length) {
+      const e = document.createElement('div');
+      e.className = 'empty';
+      e.textContent = '目前沒有訂單。';
+      box.appendChild(e);
+      return;
+    }
+    for (const o of list) box.appendChild(card(o));
+  }
+
+  // 全部用 DOM API 建立，textContent 防 XSS
+  function card(o) {
+    const el = document.createElement('div');
+    el.className = 'order-card';
+
+    const top = document.createElement('div');
+    top.className = 'oc-top';
+    const title = document.createElement('div');
+    title.className = 'oc-title';
+    title.textContent = `《${o.book}》 `;
+    const qty = document.createElement('span');
+    qty.className = 'qty';
+    qty.textContent = `× ${o.quantity}`;
+    title.appendChild(qty);
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + o.status;
+    badge.textContent = STATUS_LABEL[o.status] || o.status;
+    top.append(title, badge);
+
+    const meta = document.createElement('div');
+    meta.className = 'oc-meta';
+    const rows = [
+      ['👤 姓名', o.name],
+      ['📧 Email', o.email],
+      ['📞 電話', o.phone || '—'],
+      ['🚚 取貨', o.delivery || '—'],
+      ['🕑 時間', o.created_at],
+      ['#', 'ID ' + o.id],
+    ];
+    for (const [k, v] of rows) {
+      const d = document.createElement('div');
+      d.textContent = `${k}：${v}`;
+      meta.appendChild(d);
+    }
+
+    el.append(top, meta);
+
+    if (o.note) {
+      const note = document.createElement('div');
+      note.className = 'oc-note';
+      note.textContent = '備註：' + o.note;
+      el.appendChild(note);
+    }
+
+    const actions = document.createElement('div');
+    actions.className = 'oc-actions';
+    if (o.status !== 'confirmed') actions.appendChild(actionBtn('✓ 確認訂單', 'btn-primary', () => setStatus(o.id, 'confirmed')));
+    if (o.status !== 'cancelled') actions.appendChild(actionBtn('✕ 取消', 'btn-ghost', () => setStatus(o.id, 'cancelled')));
+    if (o.status !== 'pending') actions.appendChild(actionBtn('↺ 改回待確認', 'btn-ghost', () => setStatus(o.id, 'pending')));
+    actions.appendChild(actionBtn('刪除', 'btn-del', () => removeOrder(o.id)));
+    el.appendChild(actions);
+
+    return el;
+  }
+
+  function actionBtn(label, cls, fn) {
+    const b = document.createElement('button');
+    b.className = 'btn ' + cls;
+    b.textContent = label;
+    b.addEventListener('click', fn);
+    return b;
+  }
+
+  async function setStatus(id, status) {
+    const res = await fetch(`/api/orders/${id}/status`, {
+      method: 'PATCH',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    if (res.status === 401) { showLogin(); return; }
+    const data = await res.json();
+    if (data.order) {
+      const i = allOrders.findIndex((o) => o.id === id);
+      if (i >= 0) allOrders[i] = data.order;
+      render();
+    }
+  }
+
+  async function removeOrder(id) {
+    if (!confirm('確定要刪除這筆訂單嗎？此動作無法復原。')) return;
+    const res = await fetch(`/api/orders/${id}`, { method: 'DELETE', headers: authHeaders() });
+    if (res.status === 401) { showLogin(); return; }
+    if (res.ok) {
+      allOrders = allOrders.filter((o) => o.id !== id);
+      render();
+    }
+  }
+
+  // 啟動：若已存有效權杖就直接進後台
+  (async function init() {
+    if (token && await checkToken(token)) showAdmin();
+    else showLogin();
+  })();
+</script>
+</body>
+</html>
