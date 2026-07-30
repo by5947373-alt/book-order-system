@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>我的訂單 · 木語書坊</title>
+<style>
+  :root {
+    --bg:#f7f1e7; --paper:#fffdf8; --ink:#3a2e23; --ink-soft:#6b5b49;
+    --wood:#8b6a47; --wood-dark:#6b4f34; --wood-deep:#4a3625; --accent:#b5764a;
+    --line:#e4d8c6; --shadow:0 10px 34px rgba(74,54,37,.12);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif; line-height:1.6; }
+  .wrap { width:min(880px,94vw); margin:0 auto; padding:28px 0 60px; }
+  header.bar { background:var(--wood-deep); color:#fff; }
+  header.bar .wrap { padding:16px 0; display:flex; align-items:center; justify-content:space-between; }
+  header.bar .brand { font-weight:700; font-size:1.15rem; display:flex; align-items:center; gap:10px; }
+  header.bar .mark { width:30px; height:30px; border-radius:8px; background:rgba(255,255,255,.16); display:grid; place-items:center; }
+  header.bar a { color:#e3d5c0; font-size:.92rem; text-decoration:none; }
+  header.bar a:hover { color:#fff; }
+  h1 { font-size:1.5rem; margin:0 0 4px; }
+  .sub { color:var(--ink-soft); margin:0 0 24px; }
+  .btn { border:0; border-radius:9px; padding:9px 16px; font-size:.92rem; font-weight:600; cursor:pointer; font-family:inherit; text-decoration:none; display:inline-block; }
+  .btn-primary { background:var(--wood-dark); color:#fff; }
+  .btn-primary:hover { background:var(--wood-deep); }
+  .btn-ghost { background:transparent; border:1.4px solid var(--line); color:var(--ink); }
+  .btn-ghost:hover { background:#efe6d6; }
+
+  .toolbar { display:flex; align-items:center; gap:14px; flex-wrap:wrap; margin-bottom:18px; }
+  .toolbar .who { margin-right:auto; color:var(--ink-soft); }
+  .toolbar .who b { color:var(--wood-dark); }
+
+  .orders { display:grid; gap:14px; }
+  .order-card { background:var(--paper); border:1px solid var(--line); border-radius:14px; padding:18px 20px; box-shadow:var(--shadow); }
+  .oc-top { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .oc-title { font-weight:700; font-size:1.08rem; }
+  .oc-title .qty { color:var(--accent); font-weight:600; }
+  .badge { font-size:.78rem; font-weight:700; padding:4px 11px; border-radius:999px; white-space:nowrap; }
+  .badge.pending { background:#f4e7cf; color:#8a6a1f; }
+  .badge.confirmed { background:#dcecd6; color:#3f6f37; }
+  .badge.cancelled { background:#eddcd8; color:#a24a3a; }
+  .oc-meta { color:var(--ink-soft); font-size:.92rem; margin:10px 0 0; display:grid; grid-template-columns:repeat(2,1fr); gap:2px 20px; }
+  @media (max-width:600px){ .oc-meta { grid-template-columns:1fr; } }
+  .oc-note { margin:10px 0 0; padding:10px 12px; background:#faf4e8; border-radius:9px; font-size:.92rem; color:var(--ink-soft); }
+  .state { text-align:center; color:var(--ink-soft); padding:56px 20px; background:var(--paper); border:1px solid var(--line); border-radius:16px; }
+  .state h2 { color:var(--wood-deep); margin:0 0 8px; }
+  .state p { margin:0 0 18px; }
+  .hidden { display:none; }
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="wrap">
+    <div class="brand"><span class="mark">木</span>我的帳戶</div>
+    <a href="/">← 回首頁</a>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- 未登入 -->
+  <div class="state hidden" id="needLogin">
+    <h2>請先登入</h2>
+    <p>登入後即可查看你的訂單紀錄。</p>
+    <a class="btn btn-primary" href="/">回首頁登入</a>
+  </div>
+
+  <!-- 已登入 -->
+  <div class="hidden" id="account">
+    <h1>我的訂單</h1>
+    <p class="sub">這裡是你透過帳號送出的訂單與目前狀態。</p>
+    <div class="toolbar">
+      <span class="who" id="who"></span>
+      <a class="btn btn-ghost" href="/#order">再訂一本</a>
+      <button class="btn btn-ghost" id="logoutBtn">登出</button>
+    </div>
+    <div class="orders" id="orders"></div>
+  </div>
+</main>
+
+<script>
+  const STATUS_LABEL = { pending:'待確認', confirmed:'已確認', cancelled:'已取消' };
+
+  function card(o) {
+    const el = document.createElement('div');
+    el.className = 'order-card';
+    const top = document.createElement('div');
+    top.className = 'oc-top';
+    const title = document.createElement('div');
+    title.className = 'oc-title';
+    title.textContent = `《${o.book}》 `;
+    const qty = document.createElement('span');
+    qty.className = 'qty';
+    qty.textContent = `× ${o.quantity}`;
+    title.appendChild(qty);
+    const badge = document.createElement('span');
+    badge.className = 'badge ' + o.status;
+    badge.textContent = STATUS_LABEL[o.status] || o.status;
+    top.append(title, badge);
+
+    const meta = document.createElement('div');
+    meta.className = 'oc-meta';
+    for (const [k, v] of [
+      ['🚚 取貨', o.delivery || '—'],
+      ['📞 電話', o.phone || '—'],
+      ['🕑 下單時間', o.created_at],
+      ['#', 'ID ' + o.id],
+    ]) {
+      const d = document.createElement('div');
+      d.textContent = `${k}：${v}`;
+      meta.appendChild(d);
+    }
+    el.append(top, meta);
+    if (o.note) {
+      const note = document.createElement('div');
+      note.className = 'oc-note';
+      note.textContent = '備註：' + o.note;
+      el.appendChild(note);
+    }
+    return el;
+  }
+
+  document.getElementById('logoutBtn').addEventListener('click', async () => {
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    location.href = '/';
+  });
+
+  (async function init() {
+    let user = null;
+    try {
+      const res = await fetch('/api/auth/me');
+      user = (await res.json()).user;
+    } catch {}
+    if (!user) {
+      document.getElementById('needLogin').classList.remove('hidden');
+      return;
+    }
+    document.getElementById('account').classList.remove('hidden');
+    const who = document.getElementById('who');
+    who.textContent = '';
+    who.append('目前登入：');
+    const b = document.createElement('b');
+    b.textContent = user.name ? `${user.name}（${user.email}）` : user.email;
+    who.appendChild(b);
+
+    const box = document.getElementById('orders');
+    try {
+      const res = await fetch('/api/my/orders');
+      const orders = (await res.json()).orders || [];
+      if (!orders.length) {
+        const empty = document.createElement('div');
+        empty.className = 'state';
+        empty.innerHTML = '<h2>還沒有訂單</h2><p>去首頁填一份購買問卷，開始你的第一筆訂購吧！</p>';
+        const a = document.createElement('a');
+        a.className = 'btn btn-primary';
+        a.href = '/#order';
+        a.textContent = '前往訂購';
+        empty.appendChild(a);
+        box.appendChild(empty);
+        return;
+      }
+      for (const o of orders) box.appendChild(card(o));
+    } catch {
+      box.textContent = '載入訂單時發生問題，請稍後再試。';
+    }
+  })();
+</script>
+</body>
+</html>

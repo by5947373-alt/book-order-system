@@ -60,6 +60,61 @@
   .nav nav a:hover { color: var(--wood-dark); }
   @media (max-width: 640px) { .nav nav { display: none; } }
 
+  /* 導覽列右側 + 會員登入區 */
+  .nav-right { display: flex; align-items: center; gap: 24px; }
+  .nav-auth { display: flex; align-items: center; gap: 10px; }
+  .btn-sm {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 8px 16px; border-radius: 999px; font-size: .9rem; font-weight: 700;
+    cursor: pointer; border: 1.5px solid var(--wood); background: transparent; color: var(--wood-dark);
+    font-family: inherit; text-decoration: none; transition: background .15s ease;
+  }
+  .btn-sm:hover { background: rgba(139,106,71,.08); }
+  .btn-sm.solid { background: var(--wood-dark); color: #fff; border-color: var(--wood-dark); }
+  .btn-sm.solid:hover { background: var(--wood-deep); }
+  .nav-user { display: flex; align-items: center; gap: 12px; }
+  .nav-user .greet { font-size: .9rem; color: var(--ink-soft); }
+  .nav-user .greet b { color: var(--wood-dark); font-weight: 700; }
+  @media (max-width: 640px) { .nav-user .greet { display: none; } }
+
+  /* 登入 / 註冊 Modal */
+  .modal-mask {
+    position: fixed; inset: 0; z-index: 60; background: rgba(58,46,35,.5);
+    display: none; align-items: center; justify-content: center; padding: 20px;
+    backdrop-filter: blur(3px);
+  }
+  .modal-mask.open { display: flex; }
+  .modal {
+    width: min(420px, 100%); background: var(--paper); border-radius: 20px;
+    box-shadow: 0 30px 70px rgba(74,54,37,.35); overflow: hidden;
+  }
+  .modal-head { padding: 22px 26px 0; }
+  .modal-head h3 { margin: 0 0 4px; font-size: 1.45rem; color: var(--wood-deep); }
+  .modal-head p { margin: 0; color: var(--ink-soft); font-size: .92rem; }
+  .modal-tabs { display: flex; gap: 4px; padding: 16px 26px 0; }
+  .modal-tabs button {
+    flex: 1; padding: 9px; border: 0; background: transparent; cursor: pointer;
+    font-family: inherit; font-size: .98rem; font-weight: 700; color: var(--ink-soft);
+    border-bottom: 2.5px solid transparent;
+  }
+  .modal-tabs button.active { color: var(--wood-dark); border-bottom-color: var(--wood); }
+  .modal-body { padding: 18px 26px 26px; }
+  .modal-body .field { margin-bottom: 14px; }
+  .modal-body label { display: block; font-size: .88rem; font-weight: 600; margin-bottom: 6px; }
+  .modal-body input {
+    width: 100%; padding: 11px 13px; font-size: 1rem; font-family: inherit;
+    border: 1.5px solid var(--line); border-radius: 10px; background: #fffefb; color: var(--ink);
+  }
+  .modal-body input:focus { outline: none; border-color: var(--wood); box-shadow: 0 0 0 3px rgba(139,106,71,.14); }
+  .modal-body .btn-primary { width: 100%; justify-content: center; margin-top: 4px; }
+  .modal-err { color: #b04a3a; font-size: .88rem; margin: 10px 0 0; min-height: 1.1em; }
+  .modal-close {
+    position: absolute; top: 14px; right: 16px; background: transparent; border: 0;
+    font-size: 1.6rem; color: var(--ink-soft); cursor: pointer; line-height: 1;
+  }
+  .modal { position: relative; }
+  .field-hidden { display: none; }
+
   /* ---- Hero ---- */
   .hero {
     position: relative; overflow: hidden;
@@ -249,13 +304,47 @@
 <header class="nav">
   <div class="wrap">
     <div class="brand"><span class="mark">木</span>木語書坊</div>
-    <nav>
-      <a href="#features">關於我們</a>
-      <a href="#order">立即訂購</a>
-      <a href="#contact">聯絡資訊</a>
-    </nav>
+    <div class="nav-right">
+      <nav>
+        <a href="#features">關於我們</a>
+        <a href="#order">立即訂購</a>
+        <a href="#contact">聯絡資訊</a>
+      </nav>
+      <div class="nav-auth" id="navAuth"></div>
+    </div>
   </div>
 </header>
+
+<!-- 登入 / 註冊 Modal -->
+<div class="modal-mask" id="authMask">
+  <div class="modal">
+    <button class="modal-close" id="authClose" aria-label="關閉">×</button>
+    <div class="modal-head">
+      <h3 id="authTitle">會員登入</h3>
+      <p>登入後下單會自動帶入資料，並可查看你的訂單。</p>
+    </div>
+    <div class="modal-tabs">
+      <button id="tabLogin" class="active" type="button">登入</button>
+      <button id="tabRegister" type="button">註冊</button>
+    </div>
+    <form class="modal-body" id="authForm" novalidate>
+      <div class="field field-hidden" id="fieldName">
+        <label for="authName">稱呼</label>
+        <input id="authName" type="text" maxlength="40" placeholder="怎麼稱呼你？" autocomplete="name" />
+      </div>
+      <div class="field">
+        <label for="authEmail">Email</label>
+        <input id="authEmail" type="email" maxlength="120" autocomplete="email" required />
+      </div>
+      <div class="field">
+        <label for="authPassword">密碼</label>
+        <input id="authPassword" type="password" maxlength="200" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="btn btn-primary" id="authSubmit">登入</button>
+      <p class="modal-err" id="authErr"></p>
+    </form>
+  </div>
+</div>
 
 <!-- Hero -->
 <section class="hero">
@@ -583,6 +672,144 @@
       chatText.focus();
     }
   }
+
+  /* ---- 會員登入系統 ---- */
+  let currentUser = null;
+  const navAuth = document.getElementById('navAuth');
+  const authMask = document.getElementById('authMask');
+  const authForm = document.getElementById('authForm');
+  const authEmail = document.getElementById('authEmail');
+  const authPassword = document.getElementById('authPassword');
+  const authName = document.getElementById('authName');
+  const fieldName = document.getElementById('fieldName');
+  const authErr = document.getElementById('authErr');
+  const authSubmit = document.getElementById('authSubmit');
+  const authTitle = document.getElementById('authTitle');
+  const tabLogin = document.getElementById('tabLogin');
+  const tabRegister = document.getElementById('tabRegister');
+  let authMode = 'login';
+
+  function renderNav() {
+    navAuth.textContent = '';
+    if (currentUser) {
+      const greet = document.createElement('span');
+      greet.className = 'greet';
+      const b = document.createElement('b');
+      b.textContent = currentUser.name || currentUser.email;
+      greet.append('你好，', b);
+      navAuth.appendChild(greet);
+      if (currentUser.role === 'admin') {
+        const admin = document.createElement('a');
+        admin.className = 'btn-sm';
+        admin.href = '/admin';
+        admin.textContent = '後台';
+        navAuth.appendChild(admin);
+      }
+      const mine = document.createElement('a');
+      mine.className = 'btn-sm';
+      mine.href = '/account';
+      mine.textContent = '我的訂單';
+      navAuth.appendChild(mine);
+      const out = document.createElement('button');
+      out.className = 'btn-sm solid';
+      out.textContent = '登出';
+      out.addEventListener('click', doLogout);
+      navAuth.appendChild(out);
+    } else {
+      const login = document.createElement('button');
+      login.className = 'btn-sm';
+      login.textContent = '登入';
+      login.addEventListener('click', () => openAuth('login'));
+      const reg = document.createElement('button');
+      reg.className = 'btn-sm solid';
+      reg.textContent = '註冊';
+      reg.addEventListener('click', () => openAuth('register'));
+      navAuth.append(login, reg);
+    }
+  }
+
+  function setMode(mode) {
+    authMode = mode;
+    authErr.textContent = '';
+    const isReg = mode === 'register';
+    tabLogin.classList.toggle('active', !isReg);
+    tabRegister.classList.toggle('active', isReg);
+    fieldName.classList.toggle('field-hidden', !isReg);
+    authTitle.textContent = isReg ? '註冊會員' : '會員登入';
+    authSubmit.textContent = isReg ? '註冊' : '登入';
+    authPassword.autocomplete = isReg ? 'new-password' : 'current-password';
+  }
+  function openAuth(mode) {
+    setMode(mode || 'login');
+    authMask.classList.add('open');
+    setTimeout(() => authEmail.focus(), 50);
+  }
+  function closeAuth() { authMask.classList.remove('open'); }
+
+  tabLogin.addEventListener('click', () => setMode('login'));
+  tabRegister.addEventListener('click', () => setMode('register'));
+  document.getElementById('authClose').addEventListener('click', closeAuth);
+  authMask.addEventListener('click', (e) => { if (e.target === authMask) closeAuth(); });
+
+  authForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    authErr.textContent = '';
+    const email = authEmail.value.trim();
+    const password = authPassword.value;
+    if (!email || !password) { authErr.textContent = '請填寫 Email 與密碼'; return; }
+    if (authMode === 'register' && password.length < 8) {
+      authErr.textContent = '密碼至少要 8 個字'; return;
+    }
+    authSubmit.disabled = true;
+    const orig = authSubmit.textContent;
+    authSubmit.textContent = '處理中…';
+    try {
+      const body = { email, password };
+      if (authMode === 'register') body.name = authName.value.trim();
+      const res = await fetch('/api/auth/' + authMode, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || '發生錯誤，請稍後再試');
+      currentUser = data.user;
+      closeAuth();
+      authForm.reset();
+      renderNav();
+      prefillOrder();
+    } catch (err) {
+      authErr.textContent = err.message;
+    } finally {
+      authSubmit.disabled = false;
+      authSubmit.textContent = orig;
+    }
+  });
+
+  async function doLogout() {
+    try { await fetch('/api/auth/logout', { method: 'POST' }); } catch {}
+    currentUser = null;
+    renderNav();
+  }
+
+  // 登入後自動帶入訂購表單的姓名 / Email。
+  function prefillOrder() {
+    if (!currentUser) return;
+    const nameEl = document.getElementById('name');
+    const emailEl = document.getElementById('email');
+    if (nameEl && !nameEl.value && currentUser.name) nameEl.value = currentUser.name;
+    if (emailEl && !emailEl.value) emailEl.value = currentUser.email;
+  }
+
+  (async function initAuth() {
+    try {
+      const res = await fetch('/api/auth/me');
+      const data = await res.json();
+      currentUser = data.user;
+    } catch {}
+    renderNav();
+    prefillOrder();
+  })();
 </script>
 </body>
 </html>
