@@ -274,6 +274,11 @@
   .msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
   .msg.user { align-self: flex-end; background: var(--wood-dark); color: #fff; border-bottom-right-radius: 5px; }
   .msg.typing { color: var(--ink-soft); font-style: italic; }
+  .msg.bot ul, .msg.bot ol { margin: 6px 0; padding-left: 20px; }
+  .msg.bot li { margin: 3px 0; }
+  .msg.bot strong { font-weight: 700; color: var(--wood-deep); }
+  .msg.bot a { color: var(--wood-dark); word-break: break-all; }
+  .msg.bot div + div { margin-top: 4px; }
   .chat-suggest { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 10px; }
   .chat-suggest button {
     background: #fff; border: 1px solid var(--line); color: var(--wood-dark);
@@ -634,6 +639,41 @@
     if (btn) { chatText.value = btn.dataset.q; sendChat(); }
   });
 
+  // 極簡且安全的 Markdown：先跳脫 HTML，再套用粗體 / 連結 / 清單。
+  function escHtml(s) {
+    return String(s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+  function inlineMd(t) {
+    return escHtml(t)
+      .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+      .replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  }
+  function renderMarkdown(src) {
+    const lines = String(src).replace(/\r\n/g, '\n').split('\n');
+    let html = '', listType = null;
+    const closeList = () => { if (listType) { html += '</' + listType + '>'; listType = null; } };
+    for (const line of lines) {
+      const t = line.trim();
+      const ol = t.match(/^(\d+)[.、)]\s+(.*)$/);
+      const ul = t.match(/^[-*・•]\s+(.*)$/);
+      if (ol) {
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += '<li>' + inlineMd(ol[2]) + '</li>';
+      } else if (ul) {
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += '<li>' + inlineMd(ul[1]) + '</li>';
+      } else if (t) {
+        closeList();
+        html += '<div>' + inlineMd(t) + '</div>';
+      } else {
+        closeList();
+      }
+    }
+    closeList();
+    return html;
+  }
+
   async function sendChat() {
     const text = chatText.value.trim();
     if (!text || chatBusy) return;
@@ -646,8 +686,8 @@
     chatText.value = '';
     chatText.style.height = 'auto';
 
-    const typing = addBubble('小幫手輸入中…', 'bot');
-    typing.classList.add('typing');
+    const bubble = addBubble('小幫手輸入中…', 'bot');
+    bubble.classList.add('typing');
 
     try {
       const res = await fetch('/api/chat', {
@@ -655,16 +695,29 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: history.slice(-20) }),
       });
-      const data = await res.json().catch(() => ({}));
-      typing.remove();
-      if (!res.ok) {
-        addBubble(data.error || '不好意思，暫時無法回應，請稍後再試。', 'bot');
-      } else {
-        addBubble(data.reply, 'bot');
-        history.push({ role: 'assistant', content: data.reply });
+      if (!res.ok || !res.body) {
+        let msg = '不好意思，暫時無法回應，請稍後再試。';
+        try { const d = await res.json(); if (d.error) msg = d.error; } catch {}
+        bubble.remove();
+        addBubble(msg, 'bot');
+        return;
       }
+      // 逐字串流：把打字泡泡轉成正式回覆，邊收邊渲染
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let full = '', first = true;
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        full += decoder.decode(value, { stream: true });
+        if (first) { bubble.classList.remove('typing'); first = false; }
+        bubble.innerHTML = renderMarkdown(full);
+        chatBody.scrollTop = chatBody.scrollHeight;
+      }
+      if (!full.trim()) bubble.textContent = '不好意思，我沒有理解到，可以再說一次嗎？';
+      else history.push({ role: 'assistant', content: full });
     } catch {
-      typing.remove();
+      bubble.remove();
       addBubble('連線出了點問題，請稍後再試 🙏', 'bot');
     } finally {
       chatBusy = false;
