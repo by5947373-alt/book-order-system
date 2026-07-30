@@ -174,6 +174,74 @@
   }
   footer .copy a { color: #c9b8a0; }
   @media (max-width: 720px) { footer .cols { grid-template-columns: 1fr; } }
+
+  /* ---- AI 客服小幫手 ---- */
+  .chat-fab {
+    position: fixed; right: 22px; bottom: 22px; z-index: 40;
+    display: inline-flex; align-items: center; gap: 9px;
+    padding: 13px 20px 13px 16px; border: 0; border-radius: 999px; cursor: pointer;
+    background: var(--wood-dark); color: #fff; font-family: inherit; font-size: .98rem; font-weight: 700;
+    box-shadow: 0 10px 30px rgba(74,54,37,.32); transition: transform .12s ease, background .2s ease;
+  }
+  .chat-fab:hover { transform: translateY(-2px); background: var(--wood-deep); }
+  .chat-fab .dot { font-size: 1.15rem; line-height: 1; }
+  .chat-fab.hidden { display: none; }
+
+  .chat-panel {
+    position: fixed; right: 22px; bottom: 22px; z-index: 41;
+    width: min(380px, calc(100vw - 32px)); height: min(560px, calc(100vh - 40px));
+    display: none; flex-direction: column; overflow: hidden;
+    background: var(--paper); border: 1px solid var(--line); border-radius: 20px;
+    box-shadow: 0 24px 60px rgba(74,54,37,.28);
+  }
+  .chat-panel.open { display: flex; }
+  .chat-head {
+    display: flex; align-items: center; gap: 11px; padding: 15px 16px;
+    background: linear-gradient(135deg, var(--wood), var(--wood-deep)); color: #fff;
+  }
+  .chat-head .avatar {
+    width: 38px; height: 38px; border-radius: 11px; background: rgba(255,255,255,.18);
+    display: grid; place-items: center; font-size: 1.15rem;
+  }
+  .chat-head .who { font-weight: 700; line-height: 1.2; }
+  .chat-head .who small { display: block; font-weight: 400; font-size: .78rem; opacity: .85; }
+  .chat-head .close {
+    margin-left: auto; background: transparent; border: 0; color: #fff; cursor: pointer;
+    font-size: 1.4rem; line-height: 1; opacity: .9; padding: 4px 8px;
+  }
+  .chat-head .close:hover { opacity: 1; }
+
+  .chat-body {
+    flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px;
+    background: #fbf7f0;
+  }
+  .msg { max-width: 82%; padding: 10px 13px; border-radius: 14px; font-size: .95rem; line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+  .msg.bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); color: var(--ink); border-bottom-left-radius: 5px; }
+  .msg.user { align-self: flex-end; background: var(--wood-dark); color: #fff; border-bottom-right-radius: 5px; }
+  .msg.typing { color: var(--ink-soft); font-style: italic; }
+  .chat-suggest { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 16px 10px; }
+  .chat-suggest button {
+    background: #fff; border: 1px solid var(--line); color: var(--wood-dark);
+    border-radius: 999px; padding: 6px 12px; font-size: .82rem; cursor: pointer; font-family: inherit;
+  }
+  .chat-suggest button:hover { background: #f0e7d8; }
+
+  .chat-input { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--line); background: var(--paper); }
+  .chat-input textarea {
+    flex: 1; resize: none; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 12px;
+    font-family: inherit; font-size: .95rem; max-height: 96px; min-height: 42px; color: var(--ink); background: #fffefb;
+  }
+  .chat-input textarea:focus { outline: none; border-color: var(--wood); box-shadow: 0 0 0 3px rgba(139,106,71,.14); }
+  .chat-input button {
+    align-self: flex-end; border: 0; border-radius: 12px; background: var(--wood-dark); color: #fff;
+    font-weight: 700; padding: 0 16px; height: 42px; cursor: pointer; font-family: inherit;
+  }
+  .chat-input button:hover { background: var(--wood-deep); }
+  .chat-input button:disabled { opacity: .5; cursor: default; }
+  @media (max-width: 480px) {
+    .chat-panel { right: 8px; bottom: 8px; width: calc(100vw - 16px); height: calc(100vh - 16px); }
+    .chat-fab { right: 14px; bottom: 14px; }
+  }
 </style>
 </head>
 <body>
@@ -344,6 +412,28 @@
   </div>
 </footer>
 
+<!-- AI 客服小幫手 -->
+<button class="chat-fab" id="chatFab" aria-label="開啟客服小幫手">
+  <span class="dot">💬</span> 客服小幫手
+</button>
+<section class="chat-panel" id="chatPanel" aria-live="polite">
+  <div class="chat-head">
+    <div class="avatar">📖</div>
+    <div class="who">書坊小幫手<small>線上為你解答訂購問題</small></div>
+    <button class="close" id="chatClose" aria-label="關閉">×</button>
+  </div>
+  <div class="chat-body" id="chatBody"></div>
+  <div class="chat-suggest" id="chatSuggest">
+    <button data-q="請問要怎麼訂書？">怎麼訂書？</button>
+    <button data-q="有哪些取貨方式？">取貨方式</button>
+    <button data-q="我想訂一本書，可以幫我嗎？">我想訂書</button>
+  </div>
+  <div class="chat-input">
+    <textarea id="chatText" rows="1" placeholder="輸入你的問題…" maxlength="2000"></textarea>
+    <button id="chatSend">送出</button>
+  </div>
+</section>
+
 <script>
   const form = document.getElementById('orderForm');
   const msg = document.getElementById('formMsg');
@@ -404,6 +494,95 @@
     thanks.classList.remove('show');
     document.getElementById('order').scrollIntoView({ behavior: 'smooth' });
   });
+
+  /* ---- AI 客服小幫手 ---- */
+  const fab = document.getElementById('chatFab');
+  const panel = document.getElementById('chatPanel');
+  const chatBody = document.getElementById('chatBody');
+  const chatText = document.getElementById('chatText');
+  const chatSend = document.getElementById('chatSend');
+  const chatSuggest = document.getElementById('chatSuggest');
+  const history = []; // { role, content }
+  let chatBusy = false;
+  let greeted = false;
+
+  function addBubble(text, who) {
+    const el = document.createElement('div');
+    el.className = 'msg ' + who;
+    el.textContent = text; // textContent 防 XSS
+    chatBody.appendChild(el);
+    chatBody.scrollTop = chatBody.scrollHeight;
+    return el;
+  }
+
+  function openChat() {
+    panel.classList.add('open');
+    fab.classList.add('hidden');
+    if (!greeted) {
+      greeted = true;
+      addBubble('你好～我是木語書坊的客服小幫手 📖 有什麼關於選書、訂購或取貨的問題都可以問我！', 'bot');
+    }
+    setTimeout(() => chatText.focus(), 50);
+  }
+  function closeChat() {
+    panel.classList.remove('open');
+    fab.classList.remove('hidden');
+  }
+  fab.addEventListener('click', openChat);
+  document.getElementById('chatClose').addEventListener('click', closeChat);
+
+  // 自動長高
+  chatText.addEventListener('input', () => {
+    chatText.style.height = 'auto';
+    chatText.style.height = Math.min(chatText.scrollHeight, 96) + 'px';
+  });
+  chatText.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); }
+  });
+  chatSend.addEventListener('click', sendChat);
+  chatSuggest.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-q]');
+    if (btn) { chatText.value = btn.dataset.q; sendChat(); }
+  });
+
+  async function sendChat() {
+    const text = chatText.value.trim();
+    if (!text || chatBusy) return;
+    chatBusy = true;
+    chatSend.disabled = true;
+    chatSuggest.style.display = 'none';
+
+    addBubble(text, 'user');
+    history.push({ role: 'user', content: text });
+    chatText.value = '';
+    chatText.style.height = 'auto';
+
+    const typing = addBubble('小幫手輸入中…', 'bot');
+    typing.classList.add('typing');
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history.slice(-20) }),
+      });
+      const data = await res.json().catch(() => ({}));
+      typing.remove();
+      if (!res.ok) {
+        addBubble(data.error || '不好意思，暫時無法回應，請稍後再試。', 'bot');
+      } else {
+        addBubble(data.reply, 'bot');
+        history.push({ role: 'assistant', content: data.reply });
+      }
+    } catch {
+      typing.remove();
+      addBubble('連線出了點問題，請稍後再試 🙏', 'bot');
+    } finally {
+      chatBusy = false;
+      chatSend.disabled = false;
+      chatText.focus();
+    }
+  }
 </script>
 </body>
 </html>
