@@ -147,17 +147,25 @@
 
   /* Hero 書本插畫（純 CSS/SVG，不依賴外部圖片） */
   .hero-art { display: grid; place-items: center; }
-  .book-stack {
-    width: 100%; max-width: 340px; aspect-ratio: 1/1;
-    background: var(--paper); border-radius: 24px;
-    box-shadow: var(--shadow); display: grid; place-items: center;
-    border: 1px solid var(--line);
+  .book-feature { position: relative; width: 100%; max-width: 320px; }
+  .hero-book {
+    display: block; width: 100%; height: auto;
+    border-radius: 12px;
+    box-shadow: 0 22px 50px rgba(74,54,37,.30);
+    border: 1px solid rgba(74,54,37,.12);
+    transition: transform .2s ease;
   }
-  .book-stack svg { width: 72%; height: auto; }
+  .book-feature:hover .hero-book { transform: translateY(-4px) rotate(-.5deg); }
+  .book-tag {
+    position: absolute; top: 14px; left: -10px;
+    background: var(--accent); color: #fff; font-size: .82rem; font-weight: 700;
+    padding: 6px 14px; border-radius: 6px;
+    box-shadow: 0 6px 16px rgba(181,118,74,.4);
+  }
   @media (max-width: 820px) {
     .hero .wrap { grid-template-columns: 1fr; padding: 60px 0 56px; }
     .hero-art { order: -1; }
-    .book-stack { max-width: 240px; }
+    .book-feature { max-width: 220px; }
   }
 
   /* ---- 特色 ---- */
@@ -367,18 +375,10 @@
       </div>
     </div>
     <div class="hero-art">
-      <div class="book-stack" aria-hidden="true">
-        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
-          <rect x="42" y="150" width="116" height="18" rx="4" fill="#8b6a47"/>
-          <rect x="50" y="120" width="100" height="30" rx="4" fill="#b5764a"/>
-          <rect x="58" y="120" width="10" height="30" fill="#a4653c"/>
-          <rect x="44" y="88" width="112" height="32" rx="4" fill="#6b4f34"/>
-          <rect x="52" y="88" width="10" height="32" fill="#5a4028"/>
-          <rect x="54" y="54" width="92" height="34" rx="4" fill="#c99b6b"/>
-          <rect x="62" y="54" width="10" height="34" fill="#b5875a"/>
-          <path d="M100 24c-14 0-24 8-24 8v22s10-8 24-8 24 8 24 8V32s-10-8-24-8z" fill="#4a3625"/>
-          <line x1="100" y1="34" x2="100" y2="54" stroke="#f7f1e7" stroke-width="2"/>
-        </svg>
+      <div class="book-feature">
+        <img class="hero-book" src="/assets/smart-power.jpg"
+             alt="職場巧實力 Smart Power — 口語表達專家 王東明 著" />
+        <span class="book-tag">本月精選</span>
       </div>
     </div>
   </div>

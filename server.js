@@ -607,6 +607,18 @@ const server = createServer(async (req, res) => {
   if (path === '/account' || path === '/account.html') {
     return serveFile(res, 'account.html', 'text/html; charset=utf-8');
   }
+  // 靜態資源（圖片）：僅限 assets/ 下單層檔名、副檔名白名單，防路徑穿越。
+  if (path.startsWith('/assets/') && req.method === 'GET') {
+    const rel = path.slice('/assets/'.length);
+    if (rel && !rel.includes('/') && !rel.includes('..')) {
+      const ext = rel.slice(rel.lastIndexOf('.')).toLowerCase();
+      const types = {
+        '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png',
+        '.webp': 'image/webp', '.gif': 'image/gif', '.svg': 'image/svg+xml',
+      };
+      if (types[ext]) return serveFile(res, join('assets', rel), types[ext]);
+    }
+  }
 
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' });
   res.end('Not found');
